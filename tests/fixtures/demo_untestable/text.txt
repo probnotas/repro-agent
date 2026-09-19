@@ -1,0 +1,41 @@
+Learned Dynamics Models Substantially Improve Control Performance Across Diverse Robotic Domains
+
+C. Vague, D. Underspecified
+
+NOTE: This document is a SYNTHETIC fixture shipped with repro-agent. It is not a
+real paper and describes no real experiment by any real author. It exists so the
+UNTESTABLE triage path can be demonstrated offline.
+
+Abstract
+
+We demonstrate that learned dynamics models substantially improve control
+performance across a diverse suite of robotic manipulation and locomotion
+domains. Our approach consistently outperforms strong baselines.
+
+1. Introduction
+
+Learning a model of the environment remains one of the most promising routes to
+sample-efficient control. We present an approach that combines several such ideas
+and evaluate it broadly.
+
+2. Method
+
+Our architecture consists of an encoder, a latent dynamics module, and a decoder,
+trained end-to-end. Hyperparameters were selected by informal search and are
+omitted for space. Full details will be released with the code.
+
+3. Experiments
+
+We evaluate on a suite of simulated robotic domains spanning manipulation and
+locomotion. Across these domains our method substantially outperforms the
+baselines we compare against. Performance is measured by normalized score.
+
+Figure 3 shows the aggregate comparison. Our method's advantage is consistent
+across the suite. Exact per-domain numbers, environment versions, and the number
+of random seeds are deferred to the appendix, which is not included in this
+version.
+
+4. Conclusion
+
+Learned dynamics models substantially improve control performance across diverse
+robotic domains.

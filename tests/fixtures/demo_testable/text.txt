@@ -1,0 +1,70 @@
+Random-Shooting MPC over a Learned Dynamics Model is Sample-Efficient on Pendulum Swing-Up
+
+A. Fixture, B. Synthetic
+
+NOTE: This document is a SYNTHETIC fixture shipped with repro-agent. It is not a
+real paper and describes no real experiment by any real author. It exists so the
+end-to-end pipeline can be demonstrated offline.
+
+Abstract
+
+We show that a two-layer MLP dynamics model trained on 2000 uniformly-random
+transitions from Pendulum-v1 is sufficient for random-shooting receding-horizon
+model predictive control to reach a mean episode return of -210 over 5
+evaluation episodes.
+
+1. Introduction
+
+Model-based control promises far better sample efficiency than model-free
+reinforcement learning, because a learned forward model can be reused for
+planning rather than discarded after each policy update. The cost is compounding
+model error: a planner that rolls a learned model forward for H steps accumulates
+error at every step. The central empirical question is therefore how little data
+a forward model needs before a planner built on top of it controls the system.
+
+2. Method
+
+We learn a forward dynamics model f_theta(s, a) that predicts the state delta
+s' - s. The model is a multi-layer perceptron with two hidden layers of 200 units
+each and ReLU activations. Inputs are normalized by the per-dimension mean and
+standard deviation of the training buffer. We train with Adam at a learning rate
+of 1e-3 for 100 epochs with a batch size of 256, minimizing mean squared error on
+the predicted delta.
+
+Control is random-shooting receding-horizon MPC. At each timestep we sample 500
+candidate action sequences of length 15 uniformly from the action space, roll each
+through the learned model, score each with the environment's analytic reward,
+execute the first action of the highest-scoring sequence, and replan.
+
+3. Experimental Setup
+
+All experiments use Pendulum-v1 from Gymnasium. Data collection uses a uniformly
+random policy. The training buffer contains 2000 transitions. We report the mean
+episode return over 5 evaluation episodes of 200 steps each, averaged over 3
+random seeds (0, 1, 2). An episode return above -200 is considered a successful
+swing-up, following the convention in the classic control literature.
+
+4. Results
+
+With 2000 transitions the learned model reaches a mean episode return of -210
+under MPC. This clears the -250 success threshold, establishing that 2000
+transitions suffice for swing-up on this system.
+
+Table 1: Mean episode return under MPC as a function of buffer size,
+averaged over seeds 0, 1, 2.
+
+    transitions    mean episode return    std
+    500            -289                   62
+    1000           -226                   13
+    2000           -210                   13
+    4000           -209                   14
+
+The curve is steep below 1000 transitions and flat above 2000, indicating that
+additional data buys nothing once the model has resolved the local dynamics in
+the region the planner visits.
+
+5. Conclusion
+
+2000 uniformly-random transitions are enough to learn a Pendulum-v1 dynamics
+model good enough for random-shooting MPC to swing up, reaching a mean episode
+return of -210.

@@ -1,0 +1,10 @@
+{
+  "arxiv_id": "demo-0001",
+  "title": "Random-Shooting MPC over a Learned Dynamics Model is Sample-Efficient on Pendulum Swing-Up",
+  "authors": [
+    "A. Fixture",
+    "B. Synthetic"
+  ],
+  "abstract": "We show that a two-layer MLP dynamics model trained on 2000 uniformly-random transitions from Pendulum-v1 is sufficient for random-shooting receding-horizon model predictive control to reach a mean episode return of -210 over 5 evaluation episodes. This is a SYNTHETIC paper shipped as a repro-agent fixture; it describes no real experiment by any real author.",
+  "published": "2026-01-01T00:00:00Z"
+}

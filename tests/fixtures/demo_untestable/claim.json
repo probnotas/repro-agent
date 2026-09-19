@@ -1,0 +1,26 @@
+{
+  "claim_text": "The proposed learned dynamics model substantially improves control performance over baselines across a diverse suite of simulated robotic domains.",
+  "method": "encoder / latent dynamics / decoder trained end-to-end",
+  "environment": "unspecified",
+  "metric": "normalized score",
+  "reported_value": null,
+  "conditions": [
+    "aggregate across an unnamed suite of manipulation and locomotion domains"
+  ],
+  "specified": {
+    "hyperparameters": false,
+    "seeds": false,
+    "env_version": false,
+    "success_threshold": false
+  },
+  "missing": [
+    "which environments make up the suite",
+    "environment versions",
+    "network architecture sizes",
+    "learning rate and optimizer settings",
+    "number of training epochs or gradient steps",
+    "number of random seeds",
+    "the normalization used for 'normalized score'",
+    "the baselines compared against"
+  ]
+}

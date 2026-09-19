@@ -1,0 +1,29 @@
+# secrets -- never commit
+.env
+.env.local
+*.key
+
+# agent working state
+.cache/
+runs/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# environments
+venv/
+.venv/
+env/
+ENV/
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/

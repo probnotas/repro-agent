@@ -1,0 +1,20 @@
+{
+  "claim_text": "A two-layer MLP dynamics model trained on 2000 uniformly-random Pendulum-v1 transitions supports random-shooting MPC that reaches a mean episode return of -210.",
+  "method": "random-shooting receding-horizon MPC over a learned MLP forward dynamics model",
+  "environment": "Pendulum-v1",
+  "metric": "mean_episode_return",
+  "reported_value": -210.0,
+  "conditions": [
+    "2000 uniformly-random transitions in the training buffer",
+    "MLP with two hidden layers of 200 units, Adam at lr 1e-3, 100 epochs, batch size 256",
+    "MPC horizon 15, 500 candidate action sequences, replanning every step",
+    "mean over 5 evaluation episodes of 200 steps, averaged over seeds 0, 1, 2"
+  ],
+  "specified": {
+    "hyperparameters": true,
+    "seeds": true,
+    "env_version": true,
+    "success_threshold": true
+  },
+  "missing": []
+}

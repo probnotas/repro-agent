@@ -1,0 +1,7 @@
+{
+  "arxiv_id": "demo-0002",
+  "title": "Learned Dynamics Models Substantially Improve Control Performance Across Diverse Robotic Domains",
+  "authors": ["C. Vague", "D. Underspecified"],
+  "abstract": "We demonstrate that learned dynamics models substantially improve control performance across a diverse suite of robotic manipulation and locomotion domains. This is a SYNTHETIC paper shipped as a repro-agent fixture to exercise the UNTESTABLE triage path; it describes no real experiment by any real author.",
+  "published": "2026-01-01T00:00:00Z"
+}
