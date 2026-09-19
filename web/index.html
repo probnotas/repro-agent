@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>repro</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%93%8B%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #fbfbfa;
+    --panel: #ffffff;
+    --ink: #1a1a18;
+    --muted: #6b6b66;
+    --line: #e3e3de;
+    --accent: #2f5d50;
+    --field: #ffffff;
+    --log-bg: #f4f4f1;
+    --ok: #1f6f43;
+    --ok-bg: #e7f3ec;
+    --bad: #a32b2b;
+    --bad-bg: #fbeaea;
+    --warn: #8a6100;
+    --warn-bg: #fbf2dd;
+    --dead: #6d3d82;
+    --dead-bg: #f3ebf7;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17171a;
+      --panel: #1e1e22;
+      --ink: #eceae6;
+      --muted: #9a978f;
+      --line: #32323a;
+      --accent: #7fc0aa;
+      --field: #232329;
+      --log-bg: #131316;
+      --ok: #7fd3a1;
+      --ok-bg: #1b2f23;
+      --bad: #f0908c;
+      --bad-bg: #331d1d;
+      --warn: #e3bd6a;
+      --warn-bg: #2f2718;
+      --dead: #c8a3dc;
+      --dead-bg: #2a2031;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17171a; --panel: #1e1e22; --ink: #eceae6; --muted: #9a978f;
+    --line: #32323a; --accent: #7fc0aa; --field: #232329; --log-bg: #131316;
+    --ok: #7fd3a1; --ok-bg: #1b2f23; --bad: #f0908c; --bad-bg: #331d1d;
+    --warn: #e3bd6a; --warn-bg: #2f2718; --dead: #c8a3dc; --dead-bg: #2a2031;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 16px 80px; }
+
+  header { margin-bottom: 28px; }
+  h1 {
+    font-size: 30px; margin: 0 0 6px; letter-spacing: -0.02em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .tag { color: var(--muted); font-size: 14px; margin: 0; max-width: 60ch; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+  }
+
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .hint { font-weight: 400; color: var(--muted); }
+  input, select {
+    width: 100%; padding: 10px 12px; font-size: 15px; color: var(--ink);
+    background: var(--field); border: 1px solid var(--line);
+    border-radius: 8px; font-family: inherit;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+  .row > div { flex: 1 1 150px; min-width: 0; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  button {
+    padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer;
+    border-radius: 8px; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--bg);
+  }
+  button.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  #status { margin-top: 16px; font-size: 14px; color: var(--muted); display: none; }
+  #status.on { display: block; }
+  .spin {
+    display: inline-block; width: 11px; height: 11px; margin-right: 7px;
+    border: 2px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+  #logbox { margin-top: 16px; }
+  summary {
+    cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted);
+    list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "\25be "; display: inline-block; width: 1em; }
+  details:not([open]) summary::before { content: "\25b8 "; }
+  pre.log {
+    background: var(--log-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px; margin: 14px 0 0; max-height: 300px; overflow: auto;
+    font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  .verdict {
+    display: inline-block; padding: 5px 13px; border-radius: 999px;
+    font: 700 13px/1 ui-monospace, Menlo, monospace; letter-spacing: .04em;
+  }
+  .v-REPRODUCED     { color: var(--ok);   background: var(--ok-bg); }
+  .v-NOT_REPRODUCED { color: var(--bad);  background: var(--bad-bg); }
+  .v-UNTESTABLE     { color: var(--warn); background: var(--warn-bg); }
+  .v-RUN_FAILED     { color: var(--dead); background: var(--dead-bg); }
+
+  blockquote {
+    margin: 14px 0; padding: 10px 0 10px 16px;
+    border-left: 3px solid var(--accent); color: var(--ink); font-size: 15px;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+  td.num { font-family: ui-monospace, Menlo, monospace; text-align: right; }
+  h3 { font-size: 13px; letter-spacing: .06em; text-transform: uppercase;
+       color: var(--muted); margin: 24px 0 8px; }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin-bottom: 7px; }
+  .note { font-size: 13px; color: var(--muted); }
+  .err {
+    color: var(--bad); background: var(--bad-bg); border-radius: 8px;
+    padding: 12px 14px; white-space: pre-wrap;
+    font: 13px/1.5 ui-monospace, Menlo, monospace;
+  }
+  footer { margin-top: 32px; font-size: 13px; color: var(--muted); }
+  a { color: var(--accent); }
+  #card { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>repro</h1>
+  <p class="tag">
+    Paper in, report card out. Does the headline empirical claim actually
+    reproduce when you run it? This is not a summarizer &mdash; the unit of
+    value is a claim that survived execution.
+  </p>
+</header>
+
+<div class="panel">
+  <label for="target">
+    arXiv ID or URL
+    <span class="hint">&mdash; leave empty to run the offline fixture demo</span>
+  </label>
+  <input id="target" placeholder="1708.02596  ·  https://arxiv.org/abs/1708.02596" autocomplete="off">
+
+  <div class="row">
+    <div>
+      <label for="tolerance">Tolerance</label>
+      <input id="tolerance" type="number" value="0.25" min="0" step="0.05">
+    </div>
+    <div>
+      <label for="seeds">Seeds</label>
+      <input id="seeds" value="0" autocomplete="off">
+    </div>
+    <div>
+      <label for="case">Demo case</label>
+      <select id="case">
+        <option value="testable">testable</option>
+        <option value="untestable">untestable</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="run">Run</button>
+    <button id="demo" class="ghost">Run the offline demo</button>
+  </div>
+
+  <div id="status"></div>
+  <details id="logbox" open style="display:none">
+    <summary id="logsummary">Stage log</summary>
+    <pre class="log" id="log"></pre>
+  </details>
+</div>
+
+<div class="panel" id="card"></div>
+
+<footer>
+  A live run calls OpenRouter and then executes model-generated Python on this
+  machine. The offline demo needs no key and no network.
+  <a href="https://github.com/probnotas/repro-agent">repro-agent on GitHub</a>
+</footer>
+
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const BLURB = {
+  REPRODUCED: "our number landed inside the tolerance band around the paper's",
+  NOT_REPRODUCED: "the script ran, but our number fell outside the tolerance band",
+  UNTESTABLE: "the paper does not specify enough to run a fair test",
+  RUN_FAILED: "the repro script did not produce a usable number",
+};
+
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const num = (v, digits = 4) =>
+  (v === null || v === undefined || Number.isNaN(v)) ? "n/a" : Number(v).toPrecision(digits).replace(/\.?0+$/, "");
+
+let polling = null;
+
+function setBusy(busy, text) {
+  $("run").disabled = busy;
+  $("demo").disabled = busy;
+  $("status").className = text ? "on" : "";
+  $("status").innerHTML = busy
+    ? '<span class="spin"></span>' + esc(text)
+    : esc(text || "");
+}
+
+async function start(payload) {
+  if (polling) clearInterval(polling);
+  $("card").style.display = "none";
+  $("logbox").style.display = "block";
+  $("logbox").open = true;
+  $("logsummary").textContent = "Stage log";
+  $("log").textContent = "";
+  setBusy(true, "starting…");
+
+  let res;
+  try {
+    res = await fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    setBusy(false, "");
+    showError(
+      "Could not reach the repro server.\n\n" +
+      "This page needs its local backend. Start it from the repo with:\n\n" +
+      "    repro serve\n\n" +
+      "then open http://127.0.0.1:8765/"
+    );
+    return;
+  }
+
+  const body = await res.json();
+  if (!res.ok) { setBusy(false, ""); showError(body.error || "the server refused the run"); return; }
+
+  const jobId = body.job_id;
+  setBusy(true, "running… (a live run takes minutes)");
+  polling = setInterval(() => poll(jobId), 900);
+  poll(jobId);
+}
+
+async function poll(jobId) {
+  let job;
+  try {
+    job = await (await fetch("/api/job/" + jobId)).json();
+  } catch (e) { return; }
+
+  const log = $("log");
+  const pinned = log.scrollTop + log.clientHeight >= log.scrollHeight - 24;
+  log.textContent = job.log || "";
+  if (pinned) log.scrollTop = log.scrollHeight;
+
+  if (job.status === "running") return;
+  clearInterval(polling);
+  polling = null;
+  setBusy(false, "");
+
+  // The card carries the result from here; fold the log away but keep it.
+  $("logbox").open = false;
+  $("logsummary").textContent = "Stage log (what each stage did)";
+
+  if (job.status === "error") { showError(job.error || "the run failed"); return; }
+  render(job.report);
+}
+
+function showError(message) {
+  $("card").style.display = "block";
+  $("card").innerHTML = '<h3>Error</h3><div class="err">' + esc(message) + "</div>";
+}
+
+function render(r) {
+  if (!r) { showError("the run finished but produced no report"); return; }
+  const v = r.verdict;
+  const rows = [
+    ["reported (paper)", num(r.reported_value)],
+    ["ours (mean ± std)", r.our_mean === null
+      ? "n/a"
+      : `${num(r.our_mean)} ± ${num(r.our_std)} (N=${r.n_seeds})`],
+    ["delta", r.delta_pct === null ? "n/a" : (r.delta_pct >= 0 ? "+" : "") + r.delta_pct.toFixed(1) + "%"],
+    ["tolerance band", "±" + Math.round(r.tolerance * 100) + "%"],
+    ["metric", r.metric_name || r.claim.metric],
+    ["model", r.model_slug],
+  ];
+
+  let html =
+    `<span class="verdict v-${esc(v)}">${esc(v)}</span>` +
+    `<p class="note" style="margin:10px 0 0">${esc(BLURB[v] || "")}</p>` +
+    `<h3>Paper</h3><div>${esc(r.title)} <span class="note">(arXiv:${esc(r.arxiv_id)})</span></div>` +
+    `<h3>Claim</h3><blockquote>${esc(r.claim.claim_text)}</blockquote>` +
+    `<h3>Numbers</h3><table><tbody>` +
+    rows.map(([k, val]) =>
+      `<tr><th>${esc(k)}</th><td class="num">${esc(val)}</td></tr>`).join("") +
+    `</tbody></table>`;
+
+  if (r.seed_results && r.seed_results.length) {
+    html += `<h3>Per seed</h3><table>
+      <thead><tr><th>seed</th><th>value</th><th>exit</th></tr></thead><tbody>` +
+      r.seed_results.map((s) =>
+        `<tr><td class="num">${s.seed}</td><td class="num">${
+          s.value === null ? esc("— " + (s.error || "")) : num(s.value)
+        }</td><td class="num">${s.exit_code}</td></tr>`).join("") +
+      `</tbody></table>`;
+  }
+
+  if (r.notes && r.notes.length) {
+    html += "<h3>Notes</h3><ul>" +
+      r.notes.map((n) => `<li>${esc(n)}</li>`).join("") + "</ul>";
+  }
+
+  const assumptions = (r.assumptions || []).slice();
+  (r.claim.missing || []).forEach((m) => {
+    const line = "paper does not state: " + m;
+    if (!assumptions.includes(line)) assumptions.push(line);
+  });
+  if (!assumptions.length) {
+    assumptions.push("None recorded. The paper specified every value the run needed.");
+  }
+  html += `<h3>Assumptions</h3>
+    <p class="note">Every value the agent had to invent. A non-reproduction may
+    reflect these choices rather than the paper &mdash; read them first.</p><ul>` +
+    assumptions.map((a) => `<li>${esc(a)}</li>`).join("") + "</ul>";
+
+  if (r.run_path) {
+    html += `<h3>Artifacts</h3><p class="note">Every number above traces to a
+      file under <code>${esc(r.run_path)}</code></p>`;
+  }
+
+  $("card").innerHTML = html;
+  $("card").style.display = "block";
+  $("card").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function payload(mode) {
+  return {
+    mode,
+    input: $("target").value,
+    case: $("case").value,
+    tolerance: parseFloat($("tolerance").value) || 0,
+    seeds: $("seeds").value,
+  };
+}
+
+$("run").addEventListener("click", () => start(payload("auto")));
+$("demo").addEventListener("click", () => start(payload("demo")));
+$("target").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") start(payload("auto"));
+});
+</script>
+</body>
+</html>

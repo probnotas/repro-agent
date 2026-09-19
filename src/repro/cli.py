@@ -91,6 +91,12 @@ def run(arxiv_id_or_url: str, tolerance: float, seeds: str, timeout: int,
     """Run the full pipeline on a paper and print a report card."""
     if tolerance < 0:
         _die("--tolerance must be non-negative.")
+    # Validate the argument before demanding a key: a typo in the id should say
+    # so, rather than sending the user off to configure .env first.
+    try:
+        parse_arxiv_id(arxiv_id_or_url)
+    except FetchError as exc:
+        _die(str(exc))
     settings = _settings(model)
     options = RunOptions(tolerance=tolerance, seeds=_parse_seeds(seeds), timeout=timeout)
     console.print(f"[dim]model: {settings.model}[/dim]")
@@ -110,6 +116,10 @@ def run(arxiv_id_or_url: str, tolerance: float, seeds: str, timeout: int,
 @click.option("--refresh", is_flag=True, help="Ignore the cache and re-fetch the paper.")
 def extract(arxiv_id_or_url: str, model: str | None, refresh: bool) -> None:
     """Print the extracted claim JSON. No script is generated and nothing is run."""
+    try:
+        parse_arxiv_id(arxiv_id_or_url)
+    except FetchError as exc:
+        _die(str(exc))
     settings = _settings(model)
     try:
         paper = fetch_paper(arxiv_id_or_url, refresh=refresh)
@@ -256,6 +266,27 @@ def demo(case: str, tolerance: float, seeds: str, timeout: int) -> None:
     )
     if card.comparison.verdict is Verdict.RUN_FAILED:
         sys.exit(1)
+
+
+@main.command()
+@click.option("--port", default=8765, show_default=True, help="Port to listen on.")
+@click.option("--host", default="127.0.0.1", show_default=True,
+              help="Interface to bind. Keep this on localhost.")
+@click.option("--no-browser", is_flag=True, help="Do not open a browser window.")
+def serve(port: int, host: str, no_browser: bool) -> None:
+    """Serve the local web UI at http://127.0.0.1:8765/.
+
+    A run executes model-generated Python on this machine, so the server binds
+    to localhost by default. Do not expose it to a network.
+    """
+    from .server import serve as run_server
+
+    try:
+        run_server(host=host, port=port, open_browser=not no_browser)
+    except FileNotFoundError as exc:
+        _die(str(exc))
+    except OSError as exc:
+        _die(f"Could not bind {host}:{port} -- {exc}. Try --port with another number.")
 
 
 @main.command()

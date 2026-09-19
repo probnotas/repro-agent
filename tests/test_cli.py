@@ -111,3 +111,12 @@ def test_list_shows_a_completed_run(
     shown = runner.invoke(main, ["show", "demo-0002"])
     assert shown.exit_code == 0
     assert "ASSUMPTIONS" in shown.output
+
+
+def test_bad_arxiv_id_is_reported_before_the_missing_key(runner: CliRunner) -> None:
+    """A typo in the id should say so, not send the user to configure .env."""
+    for command in (["run", "not-a-paper"], ["extract", "not-a-paper"]):
+        result = runner.invoke(main, command)
+        assert result.exit_code == 1, command
+        assert "Could not read an arXiv id" in result.output
+        assert "cp .env.example .env" not in result.output

@@ -128,6 +128,9 @@ repro list
 
 # available model slugs and prices
 repro models --filter gpt
+
+# the local web UI instead of the terminal
+repro serve
 ```
 
 ### `repro run` options
@@ -164,6 +167,29 @@ The fixtures are **synthetic papers**, not real ones, so the demo never implies 
 verdict about anybody's published work. See `tests/fixtures/README.md` for how
 the fixture's reported number was measured.
 
+## The web UI
+
+If you would rather not use the terminal:
+
+```bash
+repro serve          # http://127.0.0.1:8765/ , opens a browser
+```
+
+One self-contained page (`web/index.html`, no CDN, no build step, no
+dependencies) with an arXiv box, a **Run the offline demo** button, a live stage
+log, and the report card rendered with the same four verdicts and the same
+mandatory assumptions section.
+
+Runs take minutes, so the browser does not sit on one request: `POST /api/run`
+starts a job and returns its id, and the page polls `GET /api/job/<id>` for the
+log and eventually the report JSON.
+
+Leave the arXiv box empty and it runs the offline fixture demo &mdash; no key, no
+network.
+
+> A run executes model-generated Python on your machine, so the server binds to
+> **localhost** and should stay there. Do not put it on a network.
+
 ## The harness
 
 Generated scripts stay small because they import primitives from
@@ -196,11 +222,15 @@ pytest                  # ~25s, no network
 pytest -m "not slow"    # skip the two full-execution tests
 ```
 
-191 tests covering claim JSON parsing (clean, fenced, prose-wrapped, malformed,
+216 tests covering claim JSON parsing (clean, fenced, prose-wrapped, malformed,
 lossy), the tolerance and verdict logic at its boundaries, harness shapes and
 determinism, the `UNTESTABLE` triage path, the OpenRouter 401/402/429 branches
-with the HTTP layer mocked, subprocess execution and timeouts, and the report's
-mandatory assumptions section. **No test touches the network.**
+with the HTTP layer mocked, the output-budget escalation on a truncated reply,
+subprocess execution and timeouts, the web server's routes and job lifecycle
+driven over a real socket, and the report's mandatory assumptions section.
+**No test touches the network** &mdash; a suite-wide fixture stops any test from
+picking up a real `.env`, so the no-key paths stay honest on a configured
+machine.
 
 ## Limitations
 

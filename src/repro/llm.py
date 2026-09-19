@@ -21,6 +21,15 @@ from .config import APP_TITLE, REFERER, Settings, get_settings
 MAX_RETRIES = 4
 BASE_BACKOFF_SECONDS = 2.0
 
+#: Default output budget. Generous enough for a claim JSON; script generation
+#: asks for more (see repro.generate).
+DEFAULT_MAX_TOKENS = 8192
+
+#: A reply truncated before any usable text is retried with the budget doubled,
+#: up to this ceiling. Reasoning models can spend a lot before the first token
+#: of the answer, and that cost is invisible from here.
+MAX_TOKEN_CEILING = 32768
+
 
 class LLMError(RuntimeError):
     """Base class for every failure raised out of this module."""
@@ -42,6 +51,15 @@ class ModelCallError(LLMError):
     """Any other non-recoverable failure from the provider."""
 
 
+class TruncatedError(LLMError):
+    """The model hit its output-token budget before emitting usable text.
+
+    Raised only after the automatic budget escalation below has been exhausted,
+    so by the time a caller sees this the request has genuinely outgrown what
+    this model will produce in one turn.
+    """
+
+
 _AUTH_MESSAGE = (
     "OpenRouter rejected the key (HTTP 401).\n"
     "Check OPENROUTER_API_KEY in your .env -- keys look like `sk-or-v1-...` and "
@@ -56,6 +74,15 @@ _RATE_MESSAGE = (
     "OpenRouter rate-limited the request (HTTP 429) and it did not recover after "
     "{n} retries.\nWait a moment, or switch OPENROUTER_MODEL to a less contended "
     "slug (`repro models`)."
+)
+
+
+_TRUNCATED_MESSAGE = (
+    "The model hit its output-token limit ({budget:,}) before producing any usable "
+    "text (finish_reason=length).\n"
+    "repro already retried with a larger budget. Some models -- particularly "
+    "reasoning models -- spend the whole budget before emitting an answer.\n"
+    "Try a different OPENROUTER_MODEL (`repro models`), or use --model on this run."
 )
 
 
@@ -100,7 +127,7 @@ def complete(
     json_mode: bool = True,
     *,
     settings: Settings | None = None,
-    max_tokens: int = 8192,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     temperature: float = 0.0,
 ) -> str:
     """Run one chat completion and return the assistant's text.
@@ -108,6 +135,9 @@ def complete(
     ``json_mode`` is a *hint*: OpenRouter's support for ``response_format`` varies
     by model, so it is requested and dropped if the provider refuses it. Callers
     must still parse defensively (see :mod:`repro.extract`).
+
+    ``max_tokens`` is a floor, not a cap: a reply truncated before any usable text
+    is retried with the budget doubled, up to :data:`MAX_TOKEN_CEILING`.
     """
     resolved = settings or get_settings()
     handle = _build_client(resolved)
@@ -143,6 +173,13 @@ def complete(
                 json_mode = False
                 continue
             _raise_for_status(exc, status, MAX_RETRIES)
+        except TruncatedError as exc:
+            last_exc = exc
+            budget = int(kwargs["max_tokens"])
+            if budget < MAX_TOKEN_CEILING and attempt < MAX_RETRIES - 1:
+                kwargs["max_tokens"] = min(budget * 2, MAX_TOKEN_CEILING)
+                continue
+            raise TruncatedError(_TRUNCATED_MESSAGE.format(budget=budget)) from exc
         except APIConnectionError as exc:
             last_exc = exc
             if attempt < MAX_RETRIES - 1:
@@ -161,13 +198,20 @@ def _looks_like_json_mode_refusal(exc: Exception) -> bool:
 
 
 def _extract_text(response: Any) -> str:
-    """Pull the message text out of a completion, failing loudly if it is empty."""
+    """Pull the message text out of a completion, failing loudly if it is empty.
+
+    An empty reply with ``finish_reason="length"`` is reported as
+    :class:`TruncatedError` so the caller can retry with a bigger budget rather
+    than treating a truncation as an unrecoverable provider error.
+    """
     choices = getattr(response, "choices", None) or []
     if not choices:
         raise ModelCallError("OpenRouter returned no choices -- nothing to parse.")
     content = getattr(choices[0].message, "content", None)
     if not content or not content.strip():
         finish = getattr(choices[0], "finish_reason", "unknown")
+        if finish == "length":
+            raise TruncatedError(finish)
         raise ModelCallError(
             f"OpenRouter returned an empty message (finish_reason={finish})."
         )

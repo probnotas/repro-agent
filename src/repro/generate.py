@@ -121,7 +121,11 @@ def generate_script(
         conditions=conditions,
         missing=missing,
     )
-    raw = complete(SYSTEM_PROMPT, user, json_mode=False, settings=settings)
+    # A repro script is far longer than a claim JSON, and a reasoning model may
+    # spend a large slice of the budget before the first line of output.
+    raw = complete(
+        SYSTEM_PROMPT, user, json_mode=False, settings=settings, max_tokens=16384
+    )
     script = strip_code_fences(raw)
 
     if not script:

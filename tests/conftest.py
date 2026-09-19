@@ -12,6 +12,21 @@ from repro.extract import Claim, parse_claim
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(autouse=True)
+def never_read_a_real_dotenv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stop any test from picking up a developer's real .env.
+
+    get_settings() loads .env from the working directory. Without this, a test
+    that means to exercise the "no API key" path would instead find a real key
+    on a configured machine and start a live run against arXiv and OpenRouter --
+    silently breaking this suite's promise that nothing here touches the network.
+    Tests that want a key set it explicitly.
+    """
+    monkeypatch.setattr("repro.config.load_env", lambda: None)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+
+
 @pytest.fixture
 def fixtures_dir() -> Path:
     return FIXTURES

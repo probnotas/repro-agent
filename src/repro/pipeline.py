@@ -49,11 +49,15 @@ def run_pipeline(
     *,
     claim: Claim | None = None,
     script: str | None = None,
+    render: bool = True,
 ) -> ReportCard:
     """Run the pipeline for one already-fetched paper and return its report card.
 
     ``claim`` and ``script`` may be supplied to skip the model calls -- that is
     how ``repro demo`` runs end-to-end with no key and no network.
+
+    ``render=False`` keeps the per-stage progress lines but skips the final
+    report panel, for callers that render the card themselves (the web UI).
     """
     directory = run_dir(paper.arxiv_id)
     _save(directory, "paper.json", {
@@ -102,7 +106,7 @@ def run_pipeline(
             tolerance=options.tolerance,
             seeds=list(options.seeds),
         )
-        return _finish(card, paper, directory, console)
+        return _finish(card, paper, directory, console, render)
 
     console.print("  testable — proceeding")
 
@@ -138,14 +142,21 @@ def run_pipeline(
         tolerance=options.tolerance,
         seeds=list(options.seeds),
     )
-    return _finish(card, paper, directory, console)
+    return _finish(card, paper, directory, console, render)
 
 
-def _finish(card: ReportCard, paper: Paper, directory: Path, console: Console) -> ReportCard:
+def _finish(
+    card: ReportCard,
+    paper: Paper,
+    directory: Path,
+    console: Console,
+    render: bool = True,
+) -> ReportCard:
     """Stage 7: write the report into the run dir and the paper dir, then print."""
     write_report(card, directory)
     write_report(card, paper_dir(paper.arxiv_id))
-    render_terminal(card, console)
+    if render:
+        render_terminal(card, console)
     return card
 
 
@@ -156,9 +167,10 @@ def run_from_arxiv(
     console: Console,
     *,
     refresh: bool = False,
+    render: bool = True,
 ) -> ReportCard:
     """Stage 1 (fetch) plus the rest of the pipeline."""
     console.print(f"[cyan]fetch[/cyan] {arxiv_id_or_url}")
     paper = fetch_paper(arxiv_id_or_url, refresh=refresh)
     console.print(f"  {escape(paper.title)}  ({paper.text_chars:,} chars of text)")
-    return run_pipeline(paper, settings, options, console)
+    return run_pipeline(paper, settings, options, console, render=render)

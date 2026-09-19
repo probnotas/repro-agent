@@ -85,6 +85,7 @@ def run_demo(
     tolerance: float = 0.25,
     seeds: tuple[int, ...] = DEMO_SEEDS,
     timeout: int = DEMO_TIMEOUT,
+    render: bool = True,
 ):
     """Run one demo case end-to-end and return its report card."""
     paper, claim, script = load_fixture(case)
@@ -99,5 +100,6 @@ def run_demo(
     )
     options = RunOptions(tolerance=tolerance, seeds=seeds, timeout=timeout)
     return run_pipeline(
-        paper, demo_settings(), options, console, claim=claim, script=script
+        paper, demo_settings(), options, console,
+        claim=claim, script=script, render=render,
     )

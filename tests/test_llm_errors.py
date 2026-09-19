@@ -190,8 +190,10 @@ def test_the_model_slug_comes_from_settings(monkeypatch) -> None:
 # --- empty / malformed responses ------------------------------------------
 
 def test_empty_content_raises_with_the_finish_reason(monkeypatch) -> None:
-    install_client(monkeypatch, lambda n, kw: message("", finish_reason="length"))
-    with pytest.raises(ModelCallError, match="finish_reason=length"):
+    """An empty reply names why it was empty. (finish_reason="length" is its own
+    recoverable case -- see the budget-escalation tests below.)"""
+    install_client(monkeypatch, lambda n, kw: message("", finish_reason="stop"))
+    with pytest.raises(ModelCallError, match="finish_reason=stop"):
         complete("sys", "user", settings=SETTINGS)
 
 
@@ -276,3 +278,68 @@ def test_list_models_rejects_an_unexpected_shape(monkeypatch) -> None:
 def test_settings_never_expose_the_key() -> None:
     assert "sk-or-v1-test" not in SETTINGS.redacted()
     assert "api_key=<set>" in SETTINGS.redacted()
+
+
+# --- truncated replies escalate the output budget -------------------------
+
+def test_truncated_reply_retries_with_a_doubled_budget(monkeypatch) -> None:
+    """A reply cut off before any text is retried with more room, not failed."""
+
+    def side_effect(n: int, kwargs: dict):
+        if n == 1:
+            return message("", finish_reason="length")
+        return message("print('RESULT: score=1')")
+
+    calls = install_client(monkeypatch, side_effect)
+    assert complete("sys", "user", settings=SETTINGS) == "print('RESULT: score=1')"
+    assert calls[0]["max_tokens"] == llm.DEFAULT_MAX_TOKENS
+    assert calls[1]["max_tokens"] == llm.DEFAULT_MAX_TOKENS * 2
+
+
+def test_budget_escalation_stops_at_the_ceiling(monkeypatch) -> None:
+    calls = install_client(monkeypatch, lambda n, kw: message("", finish_reason="length"))
+    with pytest.raises(llm.TruncatedError) as excinfo:
+        complete("sys", "user", settings=SETTINGS, max_tokens=llm.MAX_TOKEN_CEILING)
+    assert len(calls) == 1  # already at the ceiling, so no pointless retry
+    text = str(excinfo.value)
+    assert "output-token limit" in text
+    assert "OPENROUTER_MODEL" in text  # tells the user which knob to turn
+
+
+def test_budget_never_exceeds_the_ceiling(monkeypatch) -> None:
+    calls = install_client(monkeypatch, lambda n, kw: message("", finish_reason="length"))
+    with pytest.raises(llm.TruncatedError):
+        complete("sys", "user", settings=SETTINGS, max_tokens=llm.MAX_TOKEN_CEILING // 2)
+    assert all(call["max_tokens"] <= llm.MAX_TOKEN_CEILING for call in calls)
+
+
+def test_truncated_error_is_an_llm_error_so_the_cli_catches_it() -> None:
+    from repro.llm import LLMError, TruncatedError
+
+    assert issubclass(TruncatedError, LLMError)
+
+
+def test_empty_reply_for_another_reason_is_still_a_hard_error(monkeypatch) -> None:
+    calls = install_client(monkeypatch, lambda n, kw: message("", finish_reason="content_filter"))
+    with pytest.raises(ModelCallError, match="content_filter"):
+        complete("sys", "user", settings=SETTINGS)
+    assert len(calls) == 1  # not retried -- more room would not help
+
+
+def test_generate_asks_for_a_bigger_budget_than_the_default(monkeypatch) -> None:
+    """Script generation needs more room than a claim JSON."""
+    captured: dict = {}
+
+    def fake_complete(system, user, json_mode=True, **kwargs):
+        captured.update(kwargs)
+        return "print('RESULT: score=1')"
+
+    monkeypatch.setattr("repro.generate.complete", fake_complete)
+    from repro.extract import Claim
+    from repro.generate import generate_script
+
+    generate_script("T", Claim(
+        claim_text="c", method="m", environment="Pendulum-v1", metric="x",
+        reported_value=1.0, conditions=[], specified={}, missing=[],
+    ))
+    assert captured["max_tokens"] > llm.DEFAULT_MAX_TOKENS
