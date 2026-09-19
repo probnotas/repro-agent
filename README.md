@@ -63,8 +63,21 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e .
 ```
 
-CPU-only PyTorch is plenty — everything here runs on classic-control
-environments on a laptop. No GPU, no MuJoCo licence.
+Everything here runs on classic-control environments on a laptop: no GPU, no
+MuJoCo licence. If you would rather not pull the ~2.5 GB CUDA build of PyTorch,
+install the CPU wheel first:
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -e .
+```
+
+Check it works:
+
+```bash
+repro demo        # ~15s, no network and no API key needed
+pytest            # ~30s, no network
+```
 
 ## Get an OpenRouter key
 
