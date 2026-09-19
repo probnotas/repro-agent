@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from rich.console import Console
+from rich.markup import escape
 
 from .config import DEFAULT_MODEL, OPENROUTER_BASE_URL, Settings
 from .extract import Claim, parse_claim
@@ -91,7 +92,7 @@ def run_demo(
         f"[bold]repro demo[/bold] [dim]— offline fixture, no API key, no network[/dim]"
     )
     console.print(f"[cyan]fetch[/cyan] loading fixture: {fixture_dir(case)}")
-    console.print(f"  {paper.title}  ({paper.text_chars:,} chars of text)")
+    console.print(f"  {escape(paper.title)}  ({paper.text_chars:,} chars of text)")
     console.print(
         "  [yellow]note:[/yellow] this is a synthetic paper, not a real one — see "
         "tests/fixtures/README.md"

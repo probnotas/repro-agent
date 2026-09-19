@@ -424,12 +424,16 @@ def sample_efficiency_curve(
     n_candidates: int = 300,
     episodes: int = 3,
     mpc: bool = True,
-) -> dict[str, list[float]]:
+) -> dict[str, list]:
     """Train on increasing amounts of data and measure what each buys you.
 
-    Returns ``{"sample_sizes": [...], "one_step_error": [...], "return": [...]}``
-    with one entry per requested sample size. Set ``mpc=False`` to skip control
-    evaluation (much faster) -- the return list is then filled with NaN.
+    Returns ``{"sample_sizes": [int], "one_step_error": [float], "return": [float]}``
+    with one entry per requested sample size, sorted ascending by sample size.
+    Sample sizes come back as ``int`` so callers can format and index with them.
+
+    Set ``mpc=False`` to skip control evaluation (much faster) -- the return list
+    is then filled with NaN, which is not a measurement. Do not derive a reported
+    number from it.
     """
     sizes = sorted(int(s) for s in sample_sizes)
     if not sizes:
@@ -458,7 +462,7 @@ def sample_efficiency_curve(
             returns.append(float("nan"))
 
     return {
-        "sample_sizes": [float(s) for s in sizes],
+        "sample_sizes": sizes,
         "one_step_error": errors,
         "return": returns,
     }

@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from rich.console import Console
+from rich.markup import escape
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -130,9 +131,11 @@ def render_terminal(card: ReportCard, console: Console | None = None) -> None:
     table.add_column("field", style="bold cyan", no_wrap=True)
     table.add_column("value", overflow="fold")
 
-    table.add_row("paper", f"{card.title}  [dim](arXiv:{card.arxiv_id})[/dim]")
-    table.add_row("claim", card.claim.claim_text)
-    table.add_row("metric", comparison.metric_name or card.claim.metric)
+    # Claim, title and metric are model-authored text: escape them so a stray
+    # bracket (e.g. "seeds [0,1,2]") is not eaten as rich markup.
+    table.add_row("paper", f"{escape(card.title)}  [dim](arXiv:{escape(card.arxiv_id)})[/dim]")
+    table.add_row("claim", escape(card.claim.claim_text))
+    table.add_row("metric", escape(comparison.metric_name or card.claim.metric))
     table.add_row("reported", _fmt(comparison.reported_value))
     table.add_row("ours", _our_value(comparison))
     table.add_row("delta", _delta(comparison))
@@ -148,18 +151,21 @@ def render_terminal(card: ReportCard, console: Console | None = None) -> None:
     if comparison.notes:
         out.print("[bold]NOTES[/bold]")
         for note in comparison.notes:
-            out.print(f"  • {note}")
+            out.print(f"  • {escape(note)}")
         out.print()
 
     out.print("[bold]ASSUMPTIONS[/bold] [dim](every value the agent had to invent)[/dim]")
     for item in assumptions_section(card):
-        out.print(f"  • {item}")
+        out.print(f"  • {escape(item)}")
     out.print()
 
     if comparison.failed_seeds:
         out.print("[bold]FAILED SEEDS[/bold]")
         for result in comparison.failed_seeds:
-            out.print(f"  • seed {result.seed}: {result.error}  [dim]{result.artifact_dir}[/dim]")
+            out.print(
+                f"  • seed {result.seed}: {escape(result.error or '')}  "
+                f"[dim]{escape(result.artifact_dir or '')}[/dim]"
+            )
         out.print()
 
 

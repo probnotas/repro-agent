@@ -23,9 +23,10 @@ from repro.harness import (
     make_env,                   # (env_id) -> gymnasium env
 )
 
-sample_efficiency_curve returns {"sample_sizes": [...], "one_step_error": [...],
-"return": [...]}. With mpc=False the "return" list is filled with NaN -- it skips
-control evaluation entirely. Never compute a reported number from a NaN list.
+sample_efficiency_curve returns {"sample_sizes": [int], "one_step_error": [float],
+"return": [float]}, sorted ascending by sample size. With mpc=False the "return"
+list is filled with NaN -- it skips control evaluation entirely. Never compute a
+reported number from a NaN list.
 
 Transitions has .states, .actions, .next_states, .rewards (numpy arrays, matching
 leading dim), len(), and .split(frac) -> (train, holdout).

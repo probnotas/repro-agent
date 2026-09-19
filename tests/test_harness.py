@@ -240,7 +240,9 @@ def test_perturb_rejects_unknown_kinds_and_bad_magnitudes() -> None:
 
 def test_sample_efficiency_curve_shape_and_ordering() -> None:
     curve = sample_efficiency_curve("Pendulum-v1", [128, 64], epochs=2, mpc=False)
-    assert curve["sample_sizes"] == [64.0, 128.0]  # sorted ascending
+    assert curve["sample_sizes"] == [64, 128]  # sorted ascending, and ints
+    assert all(isinstance(size, int) for size in curve["sample_sizes"])
+    assert f"{curve['sample_sizes'][0]:6d}"  # generated scripts format these
     assert len(curve["one_step_error"]) == 2
     assert len(curve["return"]) == 2
     assert all(np.isfinite(value) for value in curve["one_step_error"])

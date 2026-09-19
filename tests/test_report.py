@@ -188,3 +188,21 @@ def test_terminal_render_shows_failed_seeds() -> None:
     output = console.export_text()
     assert "FAILED SEEDS" in output
     assert "it diverged" in output
+
+
+def test_markup_in_model_text_is_escaped_not_interpreted() -> None:
+    """Model-authored text can contain brackets; rich must not eat them."""
+    card = make_card(
+        claim=make_claim(
+            claim_text="Averaged over seeds [0,1,2] the return is -150.",
+            metric="return [normalized]",
+        ),
+        assumptions=["horizon [15] chosen by the agent"],
+        title="A Paper [With Brackets]",
+    )
+    console = Console(record=True, width=160)
+    render_terminal(card, console)
+    output = console.export_text()
+    assert "[0,1,2]" in output
+    assert "[With Brackets]" in output
+    assert "horizon [15] chosen by the agent" in output

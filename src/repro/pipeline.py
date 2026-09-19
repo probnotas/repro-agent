@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from rich.console import Console
+from rich.markup import escape
 
 from .compare import Comparison, compare, untestable
 from .config import DEFAULT_SEEDS, DEFAULT_TIMEOUT, DEFAULT_TOLERANCE, Settings
@@ -71,7 +72,7 @@ def run_pipeline(
     else:
         console.print("[cyan]extract[/cyan] using the supplied claim (no model call)")
     _save(directory, "claim.json", claim.to_dict())
-    console.print(f"  claim: [italic]{claim.claim_text}[/italic]")
+    console.print(f"  claim: [italic]{escape(claim.claim_text)}[/italic]")
 
     # 3. TRIAGE
     console.print("[cyan]triage[/cyan] is this specified well enough to test fairly?")
@@ -159,5 +160,5 @@ def run_from_arxiv(
     """Stage 1 (fetch) plus the rest of the pipeline."""
     console.print(f"[cyan]fetch[/cyan] {arxiv_id_or_url}")
     paper = fetch_paper(arxiv_id_or_url, refresh=refresh)
-    console.print(f"  {paper.title}  ({paper.text_chars:,} chars of text)")
+    console.print(f"  {escape(paper.title)}  ({paper.text_chars:,} chars of text)")
     return run_pipeline(paper, settings, options, console)

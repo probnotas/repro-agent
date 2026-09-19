@@ -8,6 +8,7 @@ from pathlib import Path
 
 import click
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from . import __version__
@@ -142,7 +143,7 @@ def show(arxiv_id_or_url: str) -> None:
             f"No cached report for {arxiv_id!r} (looked for {report}).\n"
             f"Run `repro run {arxiv_id}` first, or `repro list` to see what is there."
         )
-    console.print(report.read_text())
+    console.print(escape(report.read_text()))
 
 
 @main.command(name="list")
@@ -182,7 +183,7 @@ def list_runs() -> None:
     table.add_column("when", style="dim")
     for arxiv_id, title, verdict, ours, when in sorted(rows, key=lambda r: r[4], reverse=True):
         color = VERDICT_COLOR.get(verdict, "white")
-        table.add_row(arxiv_id, title, f"[{color}]{verdict}[/{color}]", ours, when)
+        table.add_row(escape(arxiv_id), escape(title), f"[{color}]{verdict}[/{color}]", ours, when)
     console.print(table)
 
 
